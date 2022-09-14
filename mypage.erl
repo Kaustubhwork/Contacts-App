@@ -121,3 +121,122 @@ start(Name,Phoneno,Address,Gender,Dob)->
     Data = string:join([Name,Phoneno,Address,Gender,Dob]," ,"),
 
     ok =  file:write_file("Contacts.csv",Data ++ "\n",  [append]).
+
+-module(new).       
+-compile(export_all).                         
+-include_lib("nitrogen_core/include/wf.hrl").            
+main() -> #template { file="./site/templates/bare.html"}.
+middle() ->
+    #container_12 { body=[
+        #grid_8 { alpha=true, prefix=2, suffix=2, omega=true,body=inner_body() }
+    ]}.
+
+inner_body()->										
+	Body = [
+		#flash{},
+		#h1{text = "Trial validation"},
+
+		#label{text="Name"},
+		#textbox{id=nameTextBox},
+
+		#label{text="Phone number"},
+		#textbox{id=phoneTextbox},
+
+
+
+
+		#p{},
+		#button {
+            id=continueButton,
+            text="Continue",
+            handle_invalid=true,
+            on_invalid=#alert{text="At least one validator failed client-side (meaning it didn't need to try the server)"},
+            postback=continue
+        }
+        ],
+
+        wf:wire(continueButton,nameTextBox,#validate { validators = [
+        #is_required{text="Required"},
+        #max_length { length=100, text="Password should not be more than 100 characters long."},     
+  		#custom{text= " Please enter only 'Alphabets without spaces'", tag =some_tag, function = fun custom_validator/2 }
+  		#custom{text =" Username already Exists ",tag = some_tag,function = fun unique/2}      
+        ]}),
+
+        wf:wire(continueButton,phoneTextbox,#validate {validators =
+        	#is_integer{text = " Must be only integer"}
+        	}),
+        
+        Body.
+
+event_invalid(continue) ->
+wf:flash("A server-side validator returned false").
+
+event(continue)->
+	Name =wf:q(nameTextBox),
+	Phoneno=wf:q(phoneTextbox),
+	Message = wf:f("Welcome ~s! Your information is valid.",	[Name]),
+    start(Name,Phoneno),
+    wf:flash(Message),
+    % exist(Name),
+    % custom_validator(_Tag,String),
+    ok;
+
+event(_) ->
+	ok.
+
+start(Name,Phoneno)->
+	Sync = string:join([Name,Phoneno],","),
+	file:write_file("Contacts.csv",Sync ++ "\n",[append]).
+	
+
+%------------ Validate
+exist(Name)->
+	Data = helper:parse_file("Contacts.csv"),
+	lists:delete($ ,Data),
+	NameList = lists:map(fun([Name|_])->
+		Name
+	end,Data),
+	lists:member(Name,NameList).
+unique(_Tag,String)->
+	not exist(String).
+
+
+custom_validator(_Tag,String) ->
+    case re:run(String,"^([A-Za-z]+$)") of
+    	{match,_} -> true;
+        nomatch -> false
+        end.
+     % not exist(String).
+% %1--------------------------
+
+% % ^[A-Za-z]+$
+%sudo kill -9 `sudo lsof -t -i:8000`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
