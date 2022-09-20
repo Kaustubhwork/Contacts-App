@@ -211,7 +211,74 @@ custom_validator(_Tag,String) ->
 
 % % ^[A-Za-z]+$
 %sudo kill -9 `sudo lsof -t -i:8000`.
+-module(entries).
+-compile(export_all).
+-include_lib("nitrogen_core/include/wf.hrl").
 
+ main() -> 
+     #template{ file="./site/templates/bare.html"}.
+
+
+body()->
+            Var = helper:parse_file("Contacts.csv"),
+            Header = #tablerow
+            {
+            cells = [
+                       #tableheader { text=" Name :" },
+                       #tableheader { text=" Phone number :" },
+                       #tableheader { text=" Address : " },
+                       #tableheader { text=" Gender : " },
+                       #tableheader { text=" Date of birth  :" }
+                    ]
+            },
+            
+            Rows = lists:map(fun (Row) ->
+                        
+                        Cells = lists:map(fun (Val) ->
+                        #tablecell{text=Val}
+                        end, Row),
+                    
+                    #tablerow{cells=Cells}
+                    end, Var),
+
+            
+            #table {header = Header, rows=Rows}.
+
+%------------------------
+
+
+
+-module(remove).
+-compile(export_all).
+-include_lib("nitrogen_core/include/wf.hrl").
+
+ main() -> 
+     #template{ file="./site/templates/bare.html"}.
+
+body()->
+
+	Var = helper:parse_file("Contacts.csv").
+
+%------------------------------------
+-module(app).
+-compile(export_all).
+-include_lib("nitrogen_core/include/wf.hrl").
+
+ main() -> 
+     #template{ file="./site/templates/bare.html"}.
+
+middle() ->
+    #container_12 { body=[
+        #grid_8 { alpha=true, prefix=2, suffix=2, omega=true,body=inner_body() }
+    ]}.
+
+inner_body()->
+	    #panel { style="margin: 50px;",
+	    body=[
+        #h1 { text="Welcome to contacts app" },
+        #link { text=" Update ,", url="http://localhost:8000/contacts" }, 
+        #link { text="View all ", url="http://localhost:8000/entries" }
+        ]}.
 
 
 
