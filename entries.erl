@@ -49,3 +49,14 @@ event(delete)->
     ok;
 event(_)->
     ok.
+%-----------------------------------------------------
+event({delete,Row})->
+    Var = helper:parse_file("Contacts.csv"),
+
+    A = lists:delete(Row,Var),
+    [[Name,Phoneno,Address,Gender,Dob]] = A,
+    % X =string:join()
+    A ="kc"
+    % X = io:format("~p,~p,~p,~p,~p~n",[Name,Phoneno,Address,Gender,Dob]),
+    D = file:write_file("Contacts.csv", X  ,[write]),   
+    io:format("~p~n",[X]).
