@@ -1,0 +1,81 @@
+-module(entries).
+-compile(export_all).
+-include_lib("nitrogen_core/include/wf.hrl").
+
+ main() -> 
+     #template{ file="./site/templates/bare.html"}.
+
+
+body()->
+
+
+
+            Var = helper:parse_file("Contacts.csv"),
+            
+            Header = #tablerow
+            {
+            cells = [
+                       #h1{text="Contacts Information"},
+                       #tableheader { text=" Name :" },
+                       #tableheader { text=" Phone number :" },
+                       #tableheader { text=" Address : " },
+                       #tableheader { text=" Gender : " },
+                       #tableheader { text=" Date of birth  :" },
+                       #tableheader { text="  Option :" }
+                    
+                    ]
+            },
+%-----------------------------------------------------------
+            Rows = lists:map(fun (Row) ->
+                            
+                            
+                            [Name,Phoneno,Address,Gender,Dateofbirth] = Row,
+
+                            Cells = lists:map(fun (Val) ->
+                                
+                            #tablecell{text=Val} end,Row)
+                             ++ [#tablecell{
+                            body = [
+                                #button{
+                                id=click,
+                                class="btn btn-danger",
+                                text ="delete",
+                                postback = {delete,Row}
+                                },
+                                #link{class = "btn btn-warning",
+                                      text=" Edit", 
+                                      url="/contacts?mode=edit&nameTextbox=" ++ Name, 
+                                      url="/contacts?mode=edit&numberTextBox=" ++ Name 
+                                        
+                                }
+
+                                ]
+                                }
+
+                            ],
+                    #tablerow{cells=Cells}
+                    end,Var),
+
+        
+%------------------Wiring-------------------------------------------------
+        wf:wire(click,#event{type= click,actions=#confirm{text="Delete the row ?"}}),
+
+
+%-----Table-Format-Display-------------------------------------------
+        #table {class ="table table-bordered border-primary",header = Header, rows=Rows}.
+
+%-----------------------------------------------------
+event({delete,Row})->
+    Var = helper:parse_file("Contacts.csv"),
+    A =lists:delete(Row,Var),
+    ?PRINT(A),
+    Acsv = lists:map(fun(X)->
+    string:join(X,",")
+    end,A),
+    %-each and every element iterate
+    ?PRINT(Acsv),
+    Acsv1 = string:join(Acsv,"\n"),
+    ?PRINT(Acsv1),
+    L =file:write_file("Contacts.csv",Acsv1 ,[write]),
+    wf:redirect("entries").
+%------------------------------------
