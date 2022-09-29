@@ -56,7 +56,8 @@ Dmy =wf:q(dobb),
                 class = "btn btn-outline-secondary",
                 id=dob,
                 text=Dmy,
-                options=[
+                options=
+                [
                 {dateFormat, "dd/mm/yy"},
                 {showButtonPanel, true}
                 ]
@@ -76,17 +77,16 @@ Dmy =wf:q(dobb),
             class= "btn btn-outline-success",
             id = edit,
             text="Edit",
-            postback ={edit}
+            postback = edit
             }
         ],
 %- VALIDATORS WIRING------------------------------------------------
    
     wf:wire(continueButton,nameTextBox,#validate { validators = [
-    % #is_required{text="Required"},
+    #is_required{text="Required"},
     #max_length { length=15, text="Password should not be more than 15 characters long."},     
     #custom{text= " Must start with  'Alphabets' " ,tag =some_tag, function = fun custom_validator/2},      
-    #custom{text= " Username already exists " ,tag =some_tag, function = fun custom_val/2}      
-
+    #custom{text= " Username already exists " ,tag =some_tag, function = fun custom_val/2}
     ]}),
         
 
@@ -103,15 +103,13 @@ Dmy =wf:q(dobb),
         #is_required { text="Required." }
     ]}),
 
+    wf:wire(continueButton,dob,#validate{ validators =[
+        #is_required{text = "Required"}
+    ]}),
+
     Body.
-
 %-------------------------------------------------
-% %------------------------------------------------
-
-event_invalid(continue) ->
-wf:flash("A server-side validator returned false").
-
-
+%Continue Postback function clause
 event(continue) ->
     Name= wf:q(nameTextBox),
     Phoneno= wf:q(numberTextBox),
@@ -120,17 +118,48 @@ event(continue) ->
     Dob=wf:q(dob),
     start(Name,Phoneno,Address,Gender,Dob),
     Message = wf:f("Welcome ~s! Your information is valid.",[Name]),
-    wf:flash(Message).
+    wf:flash(Message);
 
-%-Custom_Validator-(S-T-R-I-N-G & USERNAME EXISTS)-1---
+
+%Edit Postback function clause
+event(edit)->
+    Var =helper:parse_file("Contacts.csv"),
+    ?PRINT(Var),
+
+%-Fetching NEWDATA  
+    Name = wf:q(nameTextBox),
+    Phoneno= wf:q(numberTextBox),
+    Address=wf:q(box),
+    Gender=wf:q(gender),
+    Dob=wf:q(dob),
+    NewData = [Name,Phoneno,Address,Gender,Dob],
+
+%-Filtering the UN-matching Data
+    UnmatchedData = lists:filter(fun([H|_])->
+            H /= Name 
+    end,Var),
+
+
+
+%Joining the Unmatched Data with New Data and appending to file
+    Join = lists:map(fun(Join)->
+        string:join(Join,",")
+    end,UnmatchedData ++ [NewData]),
+    Join1 = string:join(Join,"\n"),
+    Appendfile =file:write_file("Contacts.csv",Join1 ++"\n",[write]),
+    ?PRINT(Appendfile),
+
+%------Redirect to entries
+wf:redirect("/entries").
 %-------------------------------
+
+
 is_exist(Name)->
     Data = helper:parse_file("Contacts.csv"),
     NameList = lists:map(fun([Name1|_])->
-        Name1   
+        Name1 
     end,Data),
     lists:member(Name,NameList).
-
 
 custom_val(_Tag,String)->
     not is_exist(String).
@@ -141,15 +170,21 @@ custom_validator(_Tag,String) ->
         {match,_} -> true;
         nomatch -> false
     end.
-%-----------------------------------
+
 %--------------------------------------------------------------------------------------------
 start(Name,Phoneno,Address,Gender,Dob)-> 
     Data = string:join([Name,Phoneno,Address,Gender,Dob],","),
     string:strip(Data),
     file:write_file("Contacts.csv",Data ++ "\n",  [append]).
-%-------------------------------------------------------------
-
-2)-> -module(entries).
+    
+    
+    
+    
+    
+    
+    
+    
+ -module(entries).
 -compile(export_all).
 -include_lib("nitrogen_core/include/wf.hrl").
 
@@ -180,7 +215,7 @@ body()->
             Rows = lists:map(fun (Row) ->
                             
                             
-                            [Name,Phoneno,Address,Gender,Dob] = Row,
+                            [Name,Phoneno,Address,Gender,Dob] =Row,
 
                             Cells = lists:map(fun (Val) ->
                                 
@@ -189,15 +224,25 @@ body()->
                             body = [
                                 #button{
                                 id=click,
-                                class="btn btn-success",
+                                class="btn btn-primary",
                                 text ="delete",
                                 postback = {delete,Row}
                                 },
-                                #link{class = "btn btn-warning",
+                                #link{class = "btn btn-outline-secondary",
                                 
                                     text=" Edit", 
             url="/contacts?mode=edit&nameTextbox=" ++ Name ++"&numberTextbox=" ++ Phoneno ++ "&abox=" ++ Address ++ "&geender=" ++ Gender ++ "&dobb=" ++ Dob ++ "\n"
+                                 },
+                                 
+                                 #link{
+                                 id= click,
+                                 class ="btn btn-warning",
+                                 text = "View",
+                                 postback = current_entry
+
                                  }
+
+                                 
                                 ]
                                 }
 
@@ -206,8 +251,7 @@ body()->
                     end,Var),
         
 %------------------Wiring-------------------------------------------------
-        % wf:wire(click,#event{type= click,actions=#confirm{text="Delete the row ?"}}),
-
+       % wf:wire(click,#event{type= click,actions=#confirm{text="Delete the row ?"}}),
 
 %-----Table-Format-Display-------------------------------------------
         #table {class ="table table-bordered border-primary",header = Header, rows=Rows}.
@@ -215,18 +259,18 @@ body()->
 %-----------------------------------------------------
 event({delete,Row})->
     Var = helper:parse_file("Contacts.csv"),
-    A =lists:delete(Row,Var),
-    ?PRINT(A),
+    Ax =lists:delete(Row,Var),
+    ?PRINT(Ax),
     Acsv = lists:map(fun(X)->
     string:join(X,",")
-    end,A),
-    ?PRINT(Acsv),
+    end,Ax),
     Acsv1 = string:join(Acsv,"\n"),
-    ?PRINT(Acsv1),
     file:write_file("Contacts.csv",Acsv1 ,[write]),
-    wf:redirect("entries").
+    wf:redirect("entries");
 %------------------------------------
-
+event(current_entry){
+    
+}   
 
 
 
