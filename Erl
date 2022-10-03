@@ -70,6 +70,18 @@ event({delete,Row})->
     file:write_file("Contacts.csv",Acsv1 ,[write]),
     wf:redirect("entries").
 %-----------------------------------
+-module(time).
+-compile(export_all).
+-include_lib("nitrogen_core/include/wf.hrl").	
+
+calculateAge(InputYear)->
+	InputYear1 =string:slice(InputYear,6,10),
+	?PRINT(InputYear1),
+	UpdatedYear = list_to_integer(InputYear1),
+	?PRINT(UpdatedYear),
+	{CurrentYear,CurrentMonth,CurrentDate}=date(),
+	?PRINT(CurrentYear),
+	Difference = (CurrentYear-UpdatedYear).
 
 
 
