@@ -1,190 +1,4 @@
--module(contacts).
--compile(export_all).
--include_lib("nitrogen_core/include/wf.hrl").
-
-main() -> 
-     #template{ file="./site/templates/bare.html"}.
-middle() ->
-    #container_12 { body=[
-        #grid_8 { alpha=true, prefix=2, suffix=2, omega=true,body=inner_body() }
-    ]}.
-
-%----------------------------------------------------------------------------------
-inner_body() ->
-
-
-Name=wf:q(nameTextbox),
-?PRINT(Name),
-Phonenumber =wf:q(numberTextbox),
-?PRINT(Phonenumber),
-Address=wf:q(abox),
-?PRINT(Address),
-Gender = wf:q(geender),
-?PRINT(Gender),
-Dmy =wf:q(dobb),
-?PRINT(Dmy),
-
-
-        Body = [
-            #h1 { text="Welcome,Please fill the fields" },
-            #flash{},
-%----------------------------------------------------------------------
-           
-
-           #label {text="Name"},
-           #textbox { class = "form-control" ,id=nameTextBox,text=Name},
-
-           
-           #label { text="Enter Your Phoneno:" },
-           #textbox { class = "form-control",id=numberTextBox,text =Phonenumber},
-           
-           
-           #label { text="Enter Your Address:" },
-           #textarea { class = "form-control",id=box,text = Address},
-           % #textbox { id=box},
-           
-           #label {text="Enter Your Gender:"},
-            #dropdown{class = "btn btn-outline-dark dropdown-toggle dropdown-toggle-split",id=gender,
-            options=[
-            #option{value="",text="Please select",selected = (Gender=="")},
-            #option{value=male,text="Male",selected=(Gender=="male")},
-            #option{value=female,text="Female",selected=(Gender=="female")}
-            ]},
-
-           #label { text="Enter Your Date of birth:" },
-           #datepicker_textbox{
-                class = "btn btn-outline-secondary",
-                id=dob,
-                text=Dmy,
-                options=
-                [
-                {dateFormat, "dd/mm/yy"},
-                {showButtonPanel, true}
-                ]
-            },
-
-            #p{},
-            #button
-            {
-            class="btn btn-outline-success",
-            id=continueButton,
-            text="Continue-new",
-            handle_invalid=true,
-            on_invalid=#alert{text="At least one validator failed client-side "},
-            postback=continue
-            },
-            #button{
-            class= "btn btn-outline-success",
-            id = edit,
-            text="Edit",
-            postback = edit
-            }
-        ],
-%- VALIDATORS WIRING------------------------------------------------
-   
-    wf:wire(continueButton,nameTextBox,#validate { validators = [
-    #is_required{text="Required"},
-    #max_length { length=15, text="Password should not be more than 15 characters long."},     
-    #custom{text= " Must start with  'Alphabets' " ,tag =some_tag, function = fun custom_validator/2},      
-    #custom{text= " Username already exists " ,tag =some_tag, function = fun custom_val/2}
-    ]}),
-        
-
-    wf:wire(continueButton,numberTextBox,#validate{ validators =[
-        #is_required{text="Required."}
-        % #is_integer { text="Enter a valid Phone number."}
-    ]}),
-
-    wf:wire(continueButton, box, #validate { validators=[
-        #is_required { text="Required." }
-    ]}),
-
-    wf:wire(continueButton, gender, #validate { validators=[
-        #is_required { text="Required." }
-    ]}),
-
-    wf:wire(continueButton,dob,#validate{ validators =[
-        #is_required{text = "Required"}
-    ]}),
-
-    Body.
-%-------------------------------------------------
-%Continue Postback function clause
-event(continue) ->
-    Name= wf:q(nameTextBox),
-    Phoneno= wf:q(numberTextBox),
-    Address=wf:q(box),
-    Gender=wf:q(gender),
-    Dob=wf:q(dob),
-    start(Name,Phoneno,Address,Gender,Dob),
-    Message = wf:f("Welcome ~s! Your information is valid.",[Name]),
-    wf:flash(Message);
-
-
-%Edit Postback function clause
-event(edit)->
-    Var =helper:parse_file("Contacts.csv"),
-    ?PRINT(Var),
-
-%-Fetching NEWDATA  
-    Name = wf:q(nameTextBox),
-    Phoneno= wf:q(numberTextBox),
-    Address=wf:q(box),
-    Gender=wf:q(gender),
-    Dob=wf:q(dob),
-    NewData = [Name,Phoneno,Address,Gender,Dob],
-
-%-Filtering the UN-matching Data
-    UnmatchedData = lists:filter(fun([H|_])->
-            H /= Name 
-    end,Var),
-
-
-
-%Joining the Unmatched Data with New Data and appending to file
-    Join = lists:map(fun(Join)->
-        string:join(Join,",")
-    end,UnmatchedData ++ [NewData]),
-    Join1 = string:join(Join,"\n"),
-    Appendfile =file:write_file("Contacts.csv",Join1 ++"\n",[write]),
-    ?PRINT(Appendfile),
-
-%------Redirect to entries
-wf:redirect("/entries").
-%-------------------------------
-
-
-is_exist(Name)->
-    Data = helper:parse_file("Contacts.csv"),
-    NameList = lists:map(fun([Name1|_])->
-        Name1 
-    end,Data),
-    lists:member(Name,NameList).
-
-custom_val(_Tag,String)->
-    not is_exist(String).
-%-------------------------
-
-custom_validator(_Tag,String) ->
-    case re:run(String,"^[A-Za-z]+[A-Za-z ]*$") of
-        {match,_} -> true;
-        nomatch -> false
-    end.
-
-%--------------------------------------------------------------------------------------------
-start(Name,Phoneno,Address,Gender,Dob)-> 
-    Data = string:join([Name,Phoneno,Address,Gender,Dob],","),
-    string:strip(Data),
-    file:write_file("Contacts.csv",Data ++ "\n",  [append]).
-    
-    
-    
-    
-    
-    
-    
-    
- -module(entries).
+-module(entries).
 -compile(export_all).
 -include_lib("nitrogen_core/include/wf.hrl").
 
@@ -196,65 +10,53 @@ body()->
 
 
 
-            Var = helper:parse_file("Contacts.csv"),
-            
+            FileData = helper:parse_file("Contacts.csv"),
+            ?PRINT(FileData),
             Header = #tablerow
             {
             cells = [
                        #h1{text="Contacts Information"},
+                       #tableheader { text="No:"},
                        #tableheader { text=" Name :" },
                        #tableheader { text=" Phone number :" },
                        #tableheader { text=" Address : " },
                        #tableheader { text=" Gender : " },
                        #tableheader { text=" Date of birth  :" },
-                       #tableheader { text="  Option :" }
-                    
+                       #tableheader {text= "Age"},
+
+                       #tableheader { text = "Options:"}
                     ]
             },
 %-----------------------------------------------------------
-            Rows = lists:map(fun (Row) ->
-                            
-                            
-                            [Name,Phoneno,Address,Gender,Dob] =Row,
+            Rows =  lists:foldl(fun (Row,Accin) ->   
 
-                            Cells = lists:map(fun (Val) ->
-                                
-                            #tablecell{text=Val} end,Row)
-                             ++ [#tablecell{
-                            body = [
-                                #button{
+                            [Name,Phoneno,Address,Gender,Dob] = Row,
+                            ?PRINT(Row),
+                            Age =time:calculateAge(Dob),
+                            Serialno = 0,
+                        
+                    Cells = lists:map(fun (Val) ->                                
+                                    #tablecell{text=Val}
+                        end,[Serialno] ++ Row ++ [Age]) 
+                            ++ 
+                             [#tablecell{body = [#button{
                                 id=click,
-                                class="btn btn-primary",
+                                class="btn btn-success",
                                 text ="delete",
                                 postback = {delete,Row}
                                 },
-                                #link{class = "btn btn-outline-secondary",
+                                #link{class = "btn btn-secondary",
                                 
                                     text=" Edit", 
-            url="/contacts?mode=edit&nameTextbox=" ++ Name ++"&numberTextbox=" ++ Phoneno ++ "&abox=" ++ Address ++ "&geender=" ++ Gender ++ "&dobb=" ++ Dob ++ "\n"
-                                 },
-                                 
-                                 #link{
-                                 id= click,
-                                 class ="btn btn-warning",
-                                 text = "View",
-                                 postback = current_entry
-
-                                 }
-
-                                 
+                                url="/contacts?mode=edit&nameTextbox=" ++ Name ++"&numberTextbox=" ++ Phoneno ++ "&abox=" ++ Address ++ "&geender=" ++ Gender ++ "&dobb=" ++ Dob ++ "\n"
+                                 }                              
                                 ]
                                 }
-
                             ],
-                    #tablerow{cells=Cells}
-                    end,Var),
-        
-%------------------Wiring-------------------------------------------------
-       % wf:wire(click,#event{type= click,actions=#confirm{text="Delete the row ?"}}),
-
+                        #tablerow{cells=Cells}
+                    end,0,FileData),
 %-----Table-Format-Display-------------------------------------------
-        #table {class ="table table-bordered border-primary",header = Header, rows=Rows}.
+        #table {class ="table table-primary table-striped-columns",header = Header, rows=Rows}.
 
 %-----------------------------------------------------
 event({delete,Row})->
@@ -266,12 +68,8 @@ event({delete,Row})->
     end,Ax),
     Acsv1 = string:join(Acsv,"\n"),
     file:write_file("Contacts.csv",Acsv1 ,[write]),
-    wf:redirect("entries");
-%------------------------------------
-event(current_entry){
-    
-}   
-
+    wf:redirect("entries").
+%-----------------------------------
 
 
 
